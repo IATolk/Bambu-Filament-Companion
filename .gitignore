@@ -1,0 +1,46 @@
+# Runtime data, sessions, logs and spool inventories must never be published
+data/
+network/
+network_log/
+BambuNetworkEngine.conf
+*.conf
+*.log
+*.log.*
+*.json.tmp
+ledger*.json
+status.json
+*.bak
+*.out
+*.out.*
+*.tmp
+*.lnk
+# Generated binaries and Python bytecode
+*.exe
+*.obj
+*.pdb
+*.ilk
+*.lib
+*.exp
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+# IDE and OS
+.vs/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+
+*.db
+*.sqlite*
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+*.zip
+*.7z

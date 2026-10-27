@@ -1,0 +1,17 @@
+name: Windows tests and bridge build
+on:
+  push:
+  pull_request:
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Unit tests (no cloud credentials)
+        run: python -m unittest discover -s . -p "test_*.py" -v
+      - name: Build native Windows bridge
+        shell: cmd
+        run: call Build-Bridge.cmd
