@@ -35,7 +35,7 @@ Run `Reinstall-Companion.cmd` after updating the source/build; this preserves th
 
 ### EXT spool selection
 
-If two or more physical EXT spools share the same material/color, run `Select-EXT-Spool.cmd` **before starting the print**. It lists compatible cloud inventory spools and records the exact selected spool ID with a timestamp. Change the selection whenever the physical EXT spool changes. A selection made after a task has started is not applied retroactively.
+If two or more physical EXT spools share the same material/color, run `Select-EXT-Spool.cmd` **before starting the print**. It lists compatible cloud inventory spools and records the exact selected spool ID with a timestamp. Change the selection whenever the physical EXT spool changes. An explicit selection made during a still-running task can be pinned while the task is active. Selecting a spool after the task has completed is not applied retroactively. Select the physical spool before starting the print whenever possible.
 
 If a spool was not identified unambiguously, the companion intentionally does not deduct its weight automatically; manual reconciliation may be required.
 

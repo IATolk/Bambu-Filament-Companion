@@ -152,5 +152,71 @@ class TaskSnapshotTest(unittest.TestCase):
                 self.assertEqual(loaded["extSelection"][DEV]["spoolId"],"1002")
                 self.assertEqual(len(loaded["extSelectionEvents"][DEV]),1)
                 self.assertGreater(loaded["extSelectionEvents"][DEV][0]["atEpoch"],0)
+    def test_late_ext_selection_pins_during_running(self):
+        # A confirmed manual selection during an ACTIVE task is allowed.
+        ledger = self.new_ledger()
+        start = c.parse_cloud_time(TASK["startTime"])
+        ledger["extSelectionEvents"][DEV] = [
+            {"spoolId": "1002", "atEpoch": start + 60}]
+        with patch.object(c.time, "time", return_value=start + 120):
+            with patch.object(c, "atomic_json"), patch.object(c, "log"):
+                changed = c.capture_task_spools([TASK], [A, B], ledger)
+        self.assertTrue(changed)
+        item = ledger["taskSpools"]["90001"][f"{DEV}|255|0"]
+        self.assertEqual(item["spoolId"], "1002")
+        self.assertEqual(item["method"], "explicit_ext_selection")
+
+    def test_late_ext_selection_not_used_for_finished_task(self):
+        ledger = self.new_ledger()
+        start = c.parse_cloud_time(TASK["startTime"])
+        ledger["extSelectionEvents"][DEV] = [
+            {"spoolId": "1002", "atEpoch": start + 60}]
+        terminal = dict(TASK, status=2, endTime="2026-10-24T09:00:00Z")
+        with patch.object(c.time, "time", return_value=start + 120):
+            self.assertEqual(c.explicit_ext_spool_during_running(
+                ledger, DEV, terminal), "")
+            with patch.object(c, "atomic_json"), patch.object(c, "log"):
+                changed = c.capture_task_spools([terminal], [A, B], ledger)
+        self.assertFalse(changed)
+        self.assertFalse(ledger["taskSpools"])
+
+    def test_future_ext_selection_is_not_applied(self):
+        ledger = self.new_ledger()
+        start = c.parse_cloud_time(TASK["startTime"])
+        ledger["extSelectionEvents"][DEV] = [
+            {"spoolId": "1002", "atEpoch": start + 600}]
+        with patch.object(c.time, "time", return_value=start + 120):
+            with patch.object(c, "atomic_json"), patch.object(c, "log"):
+                changed = c.capture_task_spools([TASK], [A, B], ledger)
+        self.assertFalse(changed)
+        self.assertFalse(ledger["taskSpools"])
+
+    def test_late_ext_selection_rejects_wrong_material(self):
+        ledger = self.new_ledger()
+        start = c.parse_cloud_time(TASK["startTime"])
+        ledger["extSelectionEvents"][DEV] = [
+            {"spoolId": "1002", "atEpoch": start + 60}]
+        bad = dict(B, filamentType="PETG")
+        with patch.object(c.time, "time", return_value=start + 120):
+            with patch.object(c, "atomic_json"), patch.object(c, "log"):
+                changed = c.capture_task_spools([TASK], [A, bad], ledger)
+        self.assertFalse(changed)
+        self.assertFalse(ledger["taskSpools"])
+
+    def test_pinned_spool_unchanged_after_another_live_selection(self):
+        ledger = self.new_ledger()
+        start = c.parse_cloud_time(TASK["startTime"])
+        ledger["extSelectionEvents"][DEV] = [
+            {"spoolId": "1002", "atEpoch": start + 60}]
+        with patch.object(c.time, "time", return_value=start + 120):
+            with patch.object(c, "atomic_json"), patch.object(c, "log"):
+                c.capture_task_spools([TASK], [A, B], ledger)
+        ledger["extSelectionEvents"][DEV].append(
+            {"spoolId": "1001", "atEpoch": start + 180})
+        with patch.object(c.time, "time", return_value=start + 240):
+            with patch.object(c, "atomic_json"), patch.object(c, "log"):
+                c.capture_task_spools([TASK], [A, B], ledger)
+        self.assertEqual(ledger["taskSpools"]["90001"][f"{DEV}|255|0"]["spoolId"], "1002")
+
 if __name__=="__main__":
     unittest.main(verbosity=2)

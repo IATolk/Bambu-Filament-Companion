@@ -44,3 +44,6 @@ Thumbs.db
 *.pfx
 *.zip
 *.7z
+
+# Local task journal may contain personal printer and spool IDs
+WORK_LOG.md

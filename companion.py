@@ -411,6 +411,20 @@ def explicit_ext_spool_at_start(ledger, device_id, task):
     return str(newest.get("spoolId") or "")
 
 
+def explicit_ext_spool_during_running(ledger, device_id, task):
+    """Pin an explicit EXT choice made during a currently running job only."""
+    if as_int(task.get("status")) not in (0, 1):
+        return ""
+    started = parse_cloud_time(task.get("startTime"))
+    if started is None:
+        return ""
+    events = ledger.get("extSelectionEvents", {}).get(device_id, [])
+    eligible = [e for e in events if as_float(e.get("atEpoch"), -1) >= started
+                and as_float(e.get("atEpoch"), -1) <= time.time()]
+    if not eligible:
+        return ""
+    return str(max(eligible, key=lambda e: as_float(e.get("atEpoch"), -1)).get("spoolId") or "")
+
 def capture_task_spools(tasks, spools, ledger):
     """Freeze a uniquely identified spool for each RUNNING task before completion.
 
@@ -447,13 +461,15 @@ def capture_task_spools(tasks, spools, ledger):
                 # EXT has no reliable cloud-side physical spool binding.
                 # Only a user-selected EXT spool or a unique material/color
                 # match can identify its spool at print start.
-                preferred = explicit_ext_spool_at_start(ledger, dev, task)
+                prestart_choice = explicit_ext_spool_at_start(ledger, dev, task)
+                preferred = prestart_choice or explicit_ext_spool_during_running(ledger, dev, task)
             else:
                 preferred = ledger["bindings"].get(slot_key)
             if u["ams"] == 255 and u["slot"] == 0 and preferred:
                 spool = next((s for s in spools if spool_id(s) == preferred
                               and spool_matches_material(s, u)), None)
-                reason = "explicit EXT spool selected before print"
+                reason = ("explicit EXT spool selected before print" if prestart_choice
+                          else "explicit EXT spool selected during active print")
             else:
                 spool, reason = find_spool(spools, dev, u, preferred)
             if not spool or not spool_matches_material(spool, u):
